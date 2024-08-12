@@ -24,6 +24,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json(moviesWithEmbeddings);
   } catch (error) {
     console.error('Failed to fetch embeddings:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(400).json({ error: 'Failed to fetch embedding' });
   }
 }

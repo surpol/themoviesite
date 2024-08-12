@@ -15,25 +15,26 @@ interface SimilarMovie {
   similarity: number;
 }
 
-export async function findTopSimilarMovies(movieIds: string[], topN: number): Promise<SimilarMovie[]> {
-  // Retrieve embeddings for all movie IDs
+export async function findTopSimilarMovies(movieIds: string[], topN: number): Promise<{ similarMovies: SimilarMovie[], missingMovies: string[] }> {
   const embeddings = await Promise.all(movieIds.map(id => findEmbeddingByMovieId(id)));
-  console.log('FINISHED SEARCHING EMBEDDINGS');
-  console.log(embeddings);
+
   const validEmbeddings = embeddings.filter((embedding): embedding is MovieEmbedding => embedding !== null);
+  const missingMovies = movieIds.filter((_, index) => embeddings[index] === null);
 
   if (validEmbeddings.length === 0) {
     throw new Error('No valid embeddings found for the provided movie IDs.');
   }
 
-  // Calculate the aggregated (average) embedding
+  if (missingMovies.length > 0) {
+    console.warn(`The following movie IDs were not found in the embeddings: ${missingMovies.join(', ')}`);
+  }
+
   const aggregatedEmbedding = calculateAverageEmbedding(validEmbeddings.map(movie => movie.embedding));
 
   const similarMovies: { movie: MovieEmbedding; similarity: number }[] = [];
 
-  // Stream through the JSON file to find and compare all movies
   await streamThroughEmbeddings((movie) => {
-    if (!movieIds.includes(movie.movieId)) { // Exclude the original movies
+    if (!movieIds.includes(movie.movieId)) {
       const similarity = cosineSimilarity(aggregatedEmbedding, movie.embedding);
       similarMovies.push({ movie, similarity });
     }
@@ -41,18 +42,20 @@ export async function findTopSimilarMovies(movieIds: string[], topN: number): Pr
 
   similarMovies.sort((a, b) => b.similarity - a.similarity);
 
-  return similarMovies.slice(0, topN).map(sim => ({
-    movieId: sim.movie.movieId,
-    title: sim.movie.title,
-    similarity: sim.similarity
-  }));
+  return {
+    similarMovies: similarMovies.slice(0, topN).map(sim => ({
+      movieId: sim.movie.movieId,
+      title: sim.movie.title,
+      similarity: sim.similarity
+    })),
+    missingMovies
+  };
 }
 
-// Function to calculate the average embedding vector
 function calculateAverageEmbedding(embeddings: number[][]): number[] {
   const numEmbeddings = embeddings.length;
   const embeddingLength = embeddings[0].length;
-  
+
   const averageEmbedding = new Array(embeddingLength).fill(0);
 
   embeddings.forEach(embedding => {
@@ -64,7 +67,6 @@ function calculateAverageEmbedding(embeddings: number[][]): number[] {
   return averageEmbedding.map(value => value / numEmbeddings);
 }
 
-// Streaming function to go through all embeddings
 async function streamThroughEmbeddings(callback: (movie: MovieEmbedding) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const filePath = '/Users/suryapolina/Documents/GitHub/themoviesite/themoviesite/public/movie_embeddings.json'; // Adjust the path
