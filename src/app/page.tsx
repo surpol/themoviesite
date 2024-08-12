@@ -149,8 +149,8 @@ return (
 
       {/* Display similar movies based on embeddings */}
       {similarMovies.length > 0 && (
-        <div className="mt-10 border-2 border-sky-500 rounded-md">
-          <h2 className="mb-3 text-2xl font-bold text-gray-800">SIMILAR:</h2>
+        <div className="mt-10 border-sky-500 rounded-md">
+          <h2 className="mb-3 text-2xl font-bold text-gray-800">RESULTS:</h2>
           <ul className="list-disc list-inside">
             {similarMovies.map((movie) => (
               <li className="text-gray-800 text-center list-none" key={movie.value}>{movie.label}</li>
@@ -162,7 +162,7 @@ return (
       {/* Display missing movies */}
       {missingMovies.length > 0 && (
         <div className="mt-10 border-2 border-sky-500 rounded-md">
-          <h2 className="mb-3 text-2xl font-bold text-red-600">N/A:</h2>
+          <h2 className="mb-3 text-2xl font-bold text-red-600"></h2>
           <ul className="list-disc list-inside">
             {missingMovies.map((movie) => (
               <li className="text-red-600 text-center list-none" key={movie.value}>{movie.label}</li>

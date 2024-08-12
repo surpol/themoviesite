@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
+import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { query } = req.query;
@@ -10,9 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const dbPath = path.join(process.cwd(), 'src', 'data', 'movies.db');
+
     // Open a connection to the database
     const db = await open({
-      filename: '/Users/suryapolina/Documents/GitHub/themoviesite/themoviesite/src/movies.db',  // Replace with the correct path
+      filename: dbPath,  // Replace with the correct path
       driver: sqlite3.Database,
     });
 
