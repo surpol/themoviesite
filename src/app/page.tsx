@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import Select, { MultiValue } from 'react-select';
 import debounce from 'lodash.debounce';
+import { Button } from "@/components/Button";
 
 interface MovieOption {
   value: string;
@@ -133,12 +134,12 @@ return (
       {selectedMovies.length > 0 && (
         <div className="mt-5">
           {/* Button to fetch embeddings */}
-          <button
+          <Button
             onClick={fetchSimilarMovies}
             className="mt-5 px-4 py-2 bg-blue-500 text-white rounded-lg"
           >
             Find Similar Movies
-          </button>
+          </Button>
         </div>
       )}
 

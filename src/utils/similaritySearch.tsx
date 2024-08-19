@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 import { cosineSimilarity } from './similarityUtils';
 import dotenv from 'dotenv';
-dotenv.config();
 
+dotenv.config();
 const uri = process.env.MONGODB_URI || "";
 
 let client: MongoClient;
