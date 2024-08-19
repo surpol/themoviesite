@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, Document } from 'mongodb';
 import { cosineSimilarity } from './similarityUtils';
 import dotenv from 'dotenv';
 
@@ -11,7 +11,7 @@ async function connectToDatabase() {
     client = new MongoClient(uri);
     await client.connect();
   }
-  return client.db('Movies').collection('vectors');
+  return client.db('Movies').collection<MovieEmbedding>('vectors');
 }
 
 interface MovieEmbedding {
@@ -22,8 +22,11 @@ interface MovieEmbedding {
 
 export async function findTopSimilarMovies(movieIds: string[], topN: number) {
   const collection = await connectToDatabase();
+  
+  // Fetch embeddings for the provided movie IDs
   const embeddings = await Promise.all(movieIds.map(id => collection.findOne({ movieId: id })));
 
+  // Filter out null embeddings
   const validEmbeddings = embeddings.filter((embedding): embedding is any => embedding !== null);
   const missingMovies = movieIds.filter((_, index) => embeddings[index] === null);
 
@@ -31,19 +34,24 @@ export async function findTopSimilarMovies(movieIds: string[], topN: number) {
     throw new Error('No valid embeddings found for the provided movie IDs.');
   }
 
+  // Calculate the average embedding for the selected movies
   const aggregatedEmbedding = calculateAverageEmbedding(validEmbeddings.map(movie => movie.embedding));
 
+  // Array to store similar movies
   const similarMovies: { movie: MovieEmbedding; similarity: number }[] = [];
 
+  // Fetch all movies from the collection
   const allMovies = await collection.find().toArray();
 
-  allMovies.forEach(movie => {
-    if (!movieIds.includes(movie.movieId)) {
+  allMovies.forEach((movie: Document) => {
+    // Check if the movie contains the required fields to be a MovieEmbedding
+    if (isMovieEmbedding(movie) && !movieIds.includes(movie.movieId)) {
       const similarity = cosineSimilarity(aggregatedEmbedding, movie.embedding);
       similarMovies.push({ movie, similarity });
     }
   });
 
+  // Sort similar movies by similarity score in descending order
   similarMovies.sort((a, b) => b.similarity - a.similarity);
 
   return {
@@ -56,6 +64,16 @@ export async function findTopSimilarMovies(movieIds: string[], topN: number) {
   };
 }
 
+// Type guard function to ensure the document is a MovieEmbedding
+function isMovieEmbedding(movie: Document): movie is MovieEmbedding {
+  return (
+    typeof movie.movieId === 'string' &&
+    typeof movie.title === 'string' &&
+    Array.isArray(movie.embedding)
+  );
+}
+
+// Function to calculate the average embedding
 function calculateAverageEmbedding(embeddings: number[][]): number[] {
   const numEmbeddings = embeddings.length;
   const embeddingLength = embeddings[0].length;
