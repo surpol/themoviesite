@@ -35,3 +35,20 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
+src/data/weighted_movie_embeddings.json
+src/data/movie_embeddings.json
+src/data/movies.db
+src/scripts/data.csv
+src/scripts/imdb_dataset/name.basics.tsv
+src/scripts/imdb_dataset/title.akas (1).tsv
+src/scripts/imdb_dataset/title.basics.tsv
+src/scripts/imdb_dataset/title.crew.tsv
+src/scripts/imdb_dataset/title.episode.tsv
+src/scripts/imdb_dataset/title.principals.tsv
+src/scripts/imdb_dataset/title.ratings.tsv
+src/scripts/ml-latest/genome-scores.csv
+src/scripts/ml-latest/genome-tags.csv
+src/scripts/ml-latest/links.csv
+src/scripts/ml-latest/movies.csv
+src/scripts/ml-latest/ratings.csv
+src/scripts/ml-latest/tags.csv

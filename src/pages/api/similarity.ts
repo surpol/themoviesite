@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { similarMovies, missingMovies } = await findTopSimilarMovies(movieIds, 10);
+    const { similarMovies, missingMovies } = await findTopSimilarMovies(movieIds, 12);
 
     if (missingMovies.length > 0) {
       console.warn(`The following movie IDs were not found in the embeddings: ${missingMovies.join(', ')}`);
