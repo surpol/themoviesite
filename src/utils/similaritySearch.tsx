@@ -1,16 +1,30 @@
 import { MongoClient, Document } from 'mongodb';
 import { cosineSimilarity } from './similarityUtils';
 import dotenv from 'dotenv';
-
 dotenv.config();
+
 const uri = process.env.MONGODB_URI || "";
 console.log("MONGODB_URI: " + uri);
-let client: MongoClient;
+
+// Initialize the MongoDB client
+let client: MongoClient | null = null;
+
+// Function to get the database collection
 async function connectToDatabase() {
+  // Only connect once
   if (!client) {
-    client = new MongoClient(uri);
-    await client.connect();
+    try {
+      client = new MongoClient(uri, {
+      });
+      await client.connect();
+      console.log("Connected to MongoDB");
+    } catch (error) {
+      console.error("Error connecting to MongoDB", error);
+      throw new Error("Failed to connect to the database");
+    }
   }
+
+  // Return the collection reference
   return client.db('Movies').collection<MovieEmbedding>('vectors');
 }
 
@@ -40,16 +54,15 @@ export async function findTopSimilarMovies(movieIds: string[], topN: number) {
   // Array to store similar movies
   const similarMovies: { movie: MovieEmbedding; similarity: number }[] = [];
 
-  // Fetch all movies from the collection
-  const allMovies = await collection.find().toArray();
+  // Fetch all movies from the collection in batches to prevent memory overload
+  const cursor = collection.find({ embedding: { $exists: true } });
 
-  allMovies.forEach((movie: Document) => {
-    // Check if the movie contains the required fields to be a MovieEmbedding
+  for await (const movie of cursor) {
     if (isMovieEmbedding(movie) && !movieIds.includes(movie.movieId)) {
       const similarity = cosineSimilarity(aggregatedEmbedding, movie.embedding);
       similarMovies.push({ movie, similarity });
     }
-  });
+  }
 
   // Sort similar movies by similarity score in descending order
   similarMovies.sort((a, b) => b.similarity - a.similarity);
