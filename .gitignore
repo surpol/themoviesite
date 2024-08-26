@@ -52,3 +52,4 @@ src/scripts/ml-latest/links.csv
 src/scripts/ml-latest/movies.csv
 src/scripts/ml-latest/ratings.csv
 src/scripts/ml-latest/tags.csv
+backend/node_modules/

@@ -1,21 +1,19 @@
 import { MongoClient, Document } from 'mongodb';
 import { cosineSimilarity } from './similarityUtils';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const uri = process.env.MONGODB_URI || "";
 console.log("MONGODB_URI: " + uri);
 
-// Initialize the MongoDB client
 let client: MongoClient | null = null;
 
-// Function to get the database collection
+// Function to connect to MongoDB
 async function connectToDatabase() {
-  // Only connect once
   if (!client) {
     try {
-      client = new MongoClient(uri, {
-      });
+      client = new MongoClient(uri);
       await client.connect();
       console.log("Connected to MongoDB");
     } catch (error) {
@@ -23,8 +21,6 @@ async function connectToDatabase() {
       throw new Error("Failed to connect to the database");
     }
   }
-
-  // Return the collection reference
   return client.db('Movies').collection<MovieEmbedding>('vectors');
 }
 
@@ -34,39 +30,54 @@ interface MovieEmbedding {
   embedding: number[];
 }
 
+// Function to find top similar movies with batching
 export async function findTopSimilarMovies(movieIds: string[], topN: number) {
   const collection = await connectToDatabase();
-  
+
   // Fetch embeddings for the provided movie IDs
-  const embeddings = await Promise.all(movieIds.map(id => collection.findOne({ movieId: id })));
+  const embeddings = await Promise.all(
+    movieIds.map(id => collection.findOne({ movieId: id }))
+  );
 
   // Filter out null embeddings
   const validEmbeddings = embeddings.filter((embedding): embedding is any => embedding !== null);
   const missingMovies = movieIds.filter((_, index) => embeddings[index] === null);
 
   if (validEmbeddings.length === 0) {
+    console.log('No valid embeddings found for the provided movie IDs.');
     throw new Error('No valid embeddings found for the provided movie IDs.');
   }
 
   // Calculate the average embedding for the selected movies
   const aggregatedEmbedding = calculateAverageEmbedding(validEmbeddings.map(movie => movie.embedding));
 
+  // Use a Set to avoid duplicates
+  const seenMovies = new Set<string>();
+
   // Array to store similar movies
   const similarMovies: { movie: MovieEmbedding; similarity: number }[] = [];
 
-  // Fetch all movies from the collection in batches to prevent memory overload
-  const cursor = collection.find({ embedding: { $exists: true } });
+  // Define batch size for pagination
+  const batchSize = 1000;
+  let cursor = collection.find({ embedding: { $exists: true } }).batchSize(batchSize);
 
-  for await (const movie of cursor) {
-    if (isMovieEmbedding(movie) && !movieIds.includes(movie.movieId)) {
-      const similarity = cosineSimilarity(aggregatedEmbedding, movie.embedding);
-      similarMovies.push({ movie, similarity });
+  // Process all the movies in the collection
+  while (await cursor.hasNext()) {
+    const batch = await cursor.next();
+    if (batch && isMovieEmbedding(batch) && !movieIds.includes(batch.movieId)) {
+      // Avoid duplicate movies
+      if (!seenMovies.has(batch.movieId)) {
+        seenMovies.add(batch.movieId);
+        const similarity = cosineSimilarity(aggregatedEmbedding, batch.embedding);
+        similarMovies.push({ movie: batch, similarity });
+      }
     }
   }
 
   // Sort similar movies by similarity score in descending order
   similarMovies.sort((a, b) => b.similarity - a.similarity);
 
+  // Ensure that we only return the top N movies
   return {
     similarMovies: similarMovies.slice(0, topN).map(sim => ({
       movieId: sim.movie.movieId,
